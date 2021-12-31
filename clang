@@ -1,0 +1,16 @@
+#!/bin/sh
+PFL="-mllvm -polly -mllvm -polly-run-inliner -mllvm -polly-opt-fusion=max -mllvm -polly-ast-use-context -mllvm -polly-vectorizer=stripmine -mllvm -polly-prevect-width=8 -mllvm -polly-invariant-load-hoisting -Wno-unused-command-line-argument"
+DIR="$(dirname "$(realpath "$0")")"
+ASS=false
+for i in "$@" ; do
+    if [ "$i" = "-D__ASSEMBLY__" ] ; then
+        ASS=true
+        break
+    fi
+done
+if [ $ASS != true ]
+then
+exec $0.r -fplugin=$DIR/../lib64/LLVMPolly.so $PFL "$@"
+else
+exec $0.r "$@"
+fi
