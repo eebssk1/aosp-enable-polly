@@ -1,0 +1,118 @@
+#!/bin/sh
+ADI="-mllvm --enable-loop-flatten=true -mllvm --loop-flatten-cost-threshold=4 -mllvm --enable-dfa-jump-thread=true -mllvm --dfa-max-path-length=21 -mllvm --enable-loopinterchange=true -Wno-unused-command-line-argument"
+POL="-mllvm --polly=true -mllvm --polly-run-inliner=true -mllvm --polly-vectorizer=stripmine -mllvm --polly-default-tile-size=24 -mllvm --polly-2nd-level-default-tile-size=6 -mllvm --polly-2nd-level-tiling=true -mllvm --polly-opt-max-constant-term=28 -mllvm --polly-opt-max-coefficient=28 -mllvm --polly-register-tiling=true -mllvm --polly-register-tiling-default-tile-size=3 -mllvm --polly-detect-profitability-min-per-loop-insts=47 -mllvm --polly-invariant-load-hoisting=true -mllvm --polly-detect-keep-going=true -mllvm --polly-run-dce=true -mllvm --polly-pattern-matching-based-opts=true"
+PFL=""
+#-mllvm --polly-loopfusion-greedy=true
+RELP="$(realpath "$0")"
+DIR="$(dirname $RELP)"
+EXE="$(basename $RELP)"
+PL=true
+ASS=false
+POLLY=true
+ADDI=true
+USEKR=false
+UNROLL=false
+PA=false
+MLREG=false
+X86=false
+Oz=false
+MLI=false
+HCP=false
+for i in "$@" ; do
+    if [ "$i" = "-D__NO_POLLY__" ] ; then
+        POLLY=false
+    fi
+    if [ "$i" = "-D__NO_ADDI__" ] ; then
+        ADDI=false
+    fi
+    if [ "$i" = "-D__USE_KR__" ] ; then
+        USEKR=true
+    fi
+    if [ "$i" = "-D__USE_MLREG__" ] ; then
+        MLREG=true
+    fi
+    if [ "$i" = "-funroll-loops" ]; then
+        UNROLL=true
+    fi
+    if [ "$i" = "-D__PA__" ]; then
+        PA=true
+    fi
+    if [ "$i" = "-D__ASSEMBLY__" ] ; then
+        ASS=true
+        break
+    fi
+    if [ "$i" = "-D__CUS_POLLY__" ] ; then
+        PL=false
+        break
+    fi
+    if [ "$i" = "--enable-ml-inliner=release" ] || [ "$i" = "-enable-ml-inliner=release" ] ; then
+        MLI=true
+    fi
+    if [ "$i" = "--hot-cold-split=true" ] || [ "$i" = "-hot-cold-split=true" ] ; then
+        HCP=true
+    fi
+    case "$i" in 
+        --target=x86_64*)
+            X86=true
+        ;;
+        --target=i386*)
+            X86=true
+        ;;
+        --target=i686*)
+            X86=true
+        ;;
+        -Oz)
+        Oz=true
+        ;;
+        -O*)
+        Oz=false
+        ;;
+        *)
+        ;;
+    esac
+done
+if [ $PL = true ]
+then
+PFL="$PFL $POL"
+fi
+if [ $ADDI = true ]
+then
+PFL="$PFL $ADI"
+fi
+if [ $PA = false ]
+then
+PFL="$PFL -mllvm --enable-partial-inlining=true -mllvm --disable-mr-partial-inlining=true -mllvm --max-num-inline-blocks=6 -mllvm --min-block-execution=69"
+fi
+if [ $USEKR = true ]
+then
+PFL="$PFL -mllvm --enable-knowledge-retention=true"
+fi
+if [ $UNROLL = true ]
+then
+PFL="$PFL -mllvm --enable-unroll-and-jam=true"
+fi
+if [ $MLREG = true ] && [ $X86 = false ]
+then
+PFL="$PFL -mllvm --regalloc-enable-advisor=release -mllvm --enable-local-reassign=true"
+fi
+if [ $MLI = false ] && [ $Oz = true ] && [ $X86 = false ]
+then
+PFL="$PFL -mllvm --enable-ml-inliner=release -mllvm -ml-inliner-model-selector=0"
+fi
+if [ $HCP = true ]
+then
+PFL="$PFL -mllvm --hotcoldsplit-threshold=4"
+fi
+if [ $ASS != true ] && [ $POLLY = true ]
+then
+$DIR/$EXE.r "$@" $PFL
+RET=$?
+if [ $RET != 0 ]; then
+echo "Fail with addon: $PFL"
+fi
+exit $RET
+else
+exec $DIR/$EXE.r "$@"
+fi
+
+exit -1

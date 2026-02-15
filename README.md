@@ -1,10 +1,10 @@
 # aosp-enable-polly
 These are clang wrappers to enable polly when building rom.
-Android 11 and upper contains polly support in their clang direcotry, however it requires manually load.
+Android 15 and upper contains polly support in their clang build.
 
-First rename(or copy) clang and clang++ to add ".r" suffix
+Find the clang-[version] file and add ".r" suffix to it.
+Place this wrapper script with its name.
 
-And then create links "clang.r.real" "clang++.r.real" to the real clang excutable.
+There are many clang versions available, find the .go or .md file to obtain the default global clang version.
 
-Script checks if we are building assemble file and disable the plugin because Polly won't load correctly on this case. 
-
+There are other functions in the scripts,check the script yourself.
